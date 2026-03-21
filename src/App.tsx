@@ -13,7 +13,9 @@ import {
   Hash, 
   AlertCircle,
   ChevronRight,
-  Filter
+  Filter,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -31,13 +33,13 @@ interface Keyword {
 }
 
 const COLORS = [
-  'bg-amber-200 text-amber-900',
-  'bg-blue-200 text-blue-900',
-  'bg-emerald-200 text-emerald-900',
-  'bg-rose-200 text-rose-900',
-  'bg-purple-200 text-purple-900',
-  'bg-indigo-200 text-indigo-900',
-  'bg-cyan-200 text-cyan-900',
+  'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200',
+  'bg-blue-200 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200',
+  'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200',
+  'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200',
+  'bg-purple-200 text-purple-900 dark:bg-purple-900/40 dark:text-purple-200',
+  'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-200',
+  'bg-cyan-200 text-cyan-900 dark:bg-cyan-900/40 dark:text-cyan-200',
 ];
 
 export default function App() {
@@ -47,7 +49,18 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFilterView, setIsFilterView] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('darkMode');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
   const keywords = useMemo<Keyword[]>(() => {
     return keywordsInput
@@ -223,9 +236,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1C1E] font-sans selection:bg-blue-100">
+    <div className={cn(
+      "min-h-screen font-sans selection:bg-blue-100 transition-colors duration-300",
+      isDarkMode ? "bg-[#0F1115] text-[#E2E2E2] dark" : "bg-[#F8F9FA] text-[#1A1C1E]"
+    )}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className={cn(
+        "border-b sticky top-0 z-10 transition-colors duration-300",
+        isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
+      )}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
@@ -235,14 +254,30 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                isDarkMode ? "bg-gray-800 text-yellow-400 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             {fileContent && (
               <>
-                <div className="flex items-center bg-gray-100 p-1 rounded-lg mr-2">
+                <div className={cn(
+                  "flex items-center p-1 rounded-lg mr-2",
+                  isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                )}>
                   <button
                     onClick={() => setIsFilterView(false)}
                     className={cn(
                       "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                      !isFilterView ? "bg-white shadow-sm text-blue-600" : "text-gray-500 hover:text-gray-700"
+                      !isFilterView 
+                        ? (isDarkMode ? "bg-gray-700 shadow-sm text-blue-400" : "bg-white shadow-sm text-blue-600") 
+                        : (isDarkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700")
                     )}
                   >
                     Full View
@@ -251,7 +286,9 @@ export default function App() {
                     onClick={() => setIsFilterView(true)}
                     className={cn(
                       "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                      isFilterView ? "bg-white shadow-sm text-blue-600" : "text-gray-500 hover:text-gray-700"
+                      isFilterView 
+                        ? (isDarkMode ? "bg-gray-700 shadow-sm text-blue-400" : "bg-white shadow-sm text-blue-600") 
+                        : (isDarkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700")
                     )}
                   >
                     Matches Only
@@ -259,7 +296,10 @@ export default function App() {
                 </div>
                 <button
                   onClick={downloadFiltered}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                    isDarkMode ? "text-blue-400 hover:bg-blue-900/30" : "text-blue-600 hover:bg-blue-50"
+                  )}
                 >
                   <Download size={16} />
                   <span>Export Matches</span>
@@ -274,8 +314,14 @@ export default function App() {
         {/* Left Column: Controls */}
         <div className="lg:col-span-4 space-y-6">
           {/* Upload Section */}
-          <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <section className={cn(
+            "rounded-2xl border p-5 shadow-sm transition-colors duration-300",
+            isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
+          )}>
+            <h2 className={cn(
+              "text-sm font-semibold uppercase tracking-wider mb-4 flex items-center gap-2",
+              isDarkMode ? "text-gray-400" : "text-gray-500"
+            )}>
               <Upload size={14} />
               Source File
             </h2>
@@ -289,7 +335,7 @@ export default function App() {
                 "relative border-2 border-dashed rounded-xl p-8 transition-all cursor-pointer group",
                 isDragging 
                   ? "border-blue-500 bg-blue-50" 
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  : (isDarkMode ? "border-gray-700 hover:border-gray-600 hover:bg-gray-800/50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50")
               )}
             >
               <input
@@ -303,13 +349,18 @@ export default function App() {
               <div className="flex flex-col items-center text-center">
                 <div className={cn(
                   "w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors",
-                  isDragging ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200"
+                  isDragging 
+                    ? "bg-blue-100 text-blue-600" 
+                    : (isDarkMode ? "bg-gray-800 text-gray-500 group-hover:bg-gray-700" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200")
                 )}>
                   <FileText size={24} />
                 </div>
                 {fileName ? (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">{fileName}</p>
+                    <p className={cn(
+                      "text-sm font-medium truncate max-w-[200px]",
+                      isDarkMode ? "text-gray-200" : "text-gray-900"
+                    )}>{fileName}</p>
                     <button 
                       onClick={(e) => { e.stopPropagation(); clearFile(); }}
                       className="text-xs text-red-500 hover:underline"
@@ -319,7 +370,10 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm font-medium text-gray-900">Click or drag file</p>
+                    <p className={cn(
+                      "text-sm font-medium",
+                      isDarkMode ? "text-gray-300" : "text-gray-900"
+                    )}>Click or drag file</p>
                     <p className="text-xs text-gray-500 mt-1">TXT, LOG, CSV, JSON (max 50MB)</p>
                   </>
                 )}
@@ -330,7 +384,10 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2 text-red-600 text-xs"
+                className={cn(
+                  "mt-3 p-3 border rounded-lg flex items-start gap-2 text-xs",
+                  isDarkMode ? "bg-red-900/20 border-red-900/50 text-red-400" : "bg-red-50 border-red-100 text-red-600"
+                )}
               >
                 <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <p>{error}</p>
@@ -339,19 +396,28 @@ export default function App() {
           </section>
 
           {/* Keywords Section */}
-          <section className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <section className={cn(
+            "rounded-2xl border p-5 shadow-sm transition-colors duration-300",
+            isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
+          )}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <h2 className={cn(
+                "text-sm font-semibold uppercase tracking-wider flex items-center gap-2",
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              )}>
                 <Search size={14} />
                 Keywords
               </h2>
               <div className="group relative">
                 <AlertCircle size={14} className="text-gray-400 cursor-help" />
-                <div className="absolute right-0 top-6 w-48 p-3 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl leading-relaxed">
+                <div className={cn(
+                  "absolute right-0 top-6 w-48 p-3 text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl leading-relaxed",
+                  isDarkMode ? "bg-gray-800 text-gray-200 border border-gray-700" : "bg-gray-900 text-white"
+                )}>
                   <p className="font-bold mb-1">Search Operators:</p>
                   <p><span className="text-blue-400 font-mono">+term</span>: Must be present (AND)</p>
                   <p><span className="text-red-400 font-mono">-term</span>: Must NOT be present (NOT)</p>
-                  <p><span className="text-gray-400 font-mono">term</span>: Optional (OR)</p>
+                  <p><span className={isDarkMode ? "text-gray-400 font-mono" : "text-gray-400 font-mono"}>term</span>: Optional (OR)</p>
                 </div>
               </div>
             </div>
@@ -360,7 +426,12 @@ export default function App() {
                 value={keywordsInput}
                 onChange={(e) => setKeywordsInput(e.target.value)}
                 placeholder="Use + for required, - for excluded..."
-                className="w-full h-32 p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none placeholder:text-gray-400"
+                className={cn(
+                  "w-full h-32 p-3 text-sm border rounded-xl outline-none resize-none transition-all",
+                  isDarkMode 
+                    ? "bg-[#0F1115] border-gray-800 text-gray-200 focus:ring-2 focus:ring-blue-900 placeholder:text-gray-600" 
+                    : "bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                )}
               />
               <div className="flex flex-wrap gap-2">
                 {keywords.map((kw, i) => (
@@ -397,30 +468,47 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm"
+                className={cn(
+                  "rounded-2xl border p-5 shadow-sm transition-colors duration-300",
+                  isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
+                )}
               >
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <h2 className={cn(
+                  "text-sm font-semibold uppercase tracking-wider mb-4 flex items-center gap-2",
+                  isDarkMode ? "text-gray-400" : "text-gray-500"
+                )}>
                   <Hash size={14} />
                   Occurrences
                 </h2>
                 <div className="space-y-2">
                   {stats.map((stat, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div key={i} className={cn(
+                      "flex items-center justify-between p-2 rounded-lg transition-colors",
+                      isDarkMode ? "hover:bg-gray-800/50" : "hover:bg-gray-50"
+                    )}>
                       <div className="flex items-center gap-2">
                         <div className={cn("w-2 h-2 rounded-full", stat.color.split(' ')[0])} />
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        )}>
                           {stat.keyword}
                           {stat.operator !== 'optional' && (
                             <span className={cn(
                               "ml-1.5 text-[10px] uppercase tracking-tighter px-1 rounded",
-                              stat.operator === 'required' ? "bg-blue-100 text-blue-600" : "bg-red-100 text-red-600"
+                              stat.operator === 'required' 
+                                ? (isDarkMode ? "bg-blue-900/40 text-blue-400" : "bg-blue-100 text-blue-600") 
+                                : (isDarkMode ? "bg-red-900/40 text-red-400" : "bg-red-100 text-red-600")
                             )}>
                               {stat.operator === 'required' ? 'AND' : 'NOT'}
                             </span>
                           )}
                         </span>
                       </div>
-                      <span className="text-sm font-mono font-bold text-gray-900">{stat.count}</span>
+                      <span className={cn(
+                        "text-sm font-mono font-bold",
+                        isDarkMode ? "text-gray-100" : "text-gray-900"
+                      )}>{stat.count}</span>
                     </div>
                   ))}
                 </div>
@@ -431,15 +519,27 @@ export default function App() {
 
         {/* Right Column: Content Viewer */}
         <div className="lg:col-span-8">
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm h-full flex flex-col overflow-hidden min-h-[600px]">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <section className={cn(
+            "rounded-2xl border shadow-sm h-full flex flex-col overflow-hidden min-h-[600px] transition-colors duration-300",
+            isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
+          )}>
+            <div className={cn(
+              "px-5 py-4 border-b flex items-center justify-between transition-colors duration-300",
+              isDarkMode ? "bg-[#1A1D23] border-gray-800" : "bg-gray-50/50 border-gray-100"
+            )}>
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">
+                <span className={cn(
+                  "text-sm font-medium",
+                  isDarkMode ? "text-gray-400" : "text-gray-600"
+                )}>
                   {fileName || 'No file selected'}
                 </span>
                 {isFilterView && (
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  <span className={cn(
+                    "px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider",
+                    isDarkMode ? "bg-blue-900/40 text-blue-400" : "bg-blue-100 text-blue-600"
+                  )}>
                     Filtering Active
                   </span>
                 )}
@@ -451,18 +551,27 @@ export default function App() {
               )}
             </div>
             
-            <div className="flex-1 overflow-auto p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap bg-white">
+            <div className={cn(
+              "flex-1 overflow-auto p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap transition-colors duration-300",
+              isDarkMode ? "bg-[#0F1115] text-gray-300" : "bg-white text-gray-900"
+            )}>
               {fileContent ? (
                 <div className="relative">
                   {highlightedContent}
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4 py-20">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
+                  <div className={cn(
+                    "w-16 h-16 rounded-full flex items-center justify-center border transition-colors duration-300",
+                    isDarkMode ? "bg-gray-800/20 border-gray-800" : "bg-gray-50 border-gray-100"
+                  )}>
                     <FileText size={32} className="opacity-20" />
                   </div>
                   <div className="text-center">
-                    <p className="text-base font-medium text-gray-500">Viewer is empty</p>
+                    <p className={cn(
+                      "text-base font-medium",
+                      isDarkMode ? "text-gray-500" : "text-gray-500"
+                    )}>Viewer is empty</p>
                     <p className="text-sm">Upload a file to start parsing keywords</p>
                   </div>
                 </div>
