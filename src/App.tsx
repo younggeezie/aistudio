@@ -250,7 +250,7 @@ export default function App() {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
               <Filter size={18} />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">Keyword Parser</h1>
+            <h1 className="text-lg font-semibold tracking-tight">Log File Parser</h1>
           </div>
           
           <div className="flex items-center gap-3">
@@ -583,7 +583,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-4 py-8 text-center text-gray-400 text-xs">
-        <p>&copy; 2026 Keyword File Parser &bull; Built with precision</p>
+        <p>&copy; 2026 Log File Parser &bull; Built with precision</p>
       </footer>
     </div>
   );

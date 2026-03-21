@@ -1,5 +1,5 @@
 {
-  "name": "Keyword File Parser",
+  "name": "Log File Parser",
   "description": "Upload files and search for specific keywords with real-time highlighting and statistics.",
   "requestFramePermissions": []
 }
