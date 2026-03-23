@@ -33,8 +33,11 @@ import {
   ShieldAlert,
   Activity,
   CheckSquare,
-  Copy,
-  Check
+  Maximize2,
+  Minimize2,
+  WrapText,
+  ArrowRight,
+  Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -61,22 +64,22 @@ interface SystemHighlight {
 
 const SYSTEM_HIGHLIGHTS: SystemHighlight[] = [
   {
-    pattern: '\\b(ERROR|FATAL|CRITICAL)\\b',
+    pattern: '\\b(?:ERROR|FATAL|CRITICAL)\\b',
     color: 'text-red-500 font-bold dark:text-red-400',
     type: 'level'
   },
   {
-    pattern: '\\b(WARN|WARNING)\\b',
+    pattern: '\\b(?:WARN|WARNING)\\b',
     color: 'text-amber-500 font-bold dark:text-amber-400',
     type: 'level'
   },
   {
-    pattern: '\\b(INFO)\\b',
+    pattern: '\\b(?:INFO)\\b',
     color: 'text-blue-500 font-bold dark:text-blue-400',
     type: 'level'
   },
   {
-    pattern: '\\b(DEBUG|TRACE)\\b',
+    pattern: '\\b(?:DEBUG|TRACE)\\b',
     color: 'text-gray-500 font-bold dark:text-gray-400',
     type: 'level'
   },
@@ -108,6 +111,7 @@ interface RowData {
   checkLineMatch: (line: string) => boolean;
   highlightRegex: RegExp | null;
   sortedKeywords: Keyword[];
+  wrapLines: boolean;
 }
 
 const SYSTEM_HIGHLIGHTS_COMPILED = SYSTEM_HIGHLIGHTS.map(s => ({
@@ -117,19 +121,11 @@ const SYSTEM_HIGHLIGHTS_COMPILED = SYSTEM_HIGHLIGHTS.map(s => ({
 }));
 
 const Row = React.memo(({ index, style, data }: { index: number; style: React.CSSProperties; data: RowData }) => {
-  const { lines, keywords, checkLineMatch, highlightRegex, sortedKeywords } = data;
+  const { lines, keywords, checkLineMatch, highlightRegex, sortedKeywords, wrapLines } = data;
   const lineObj = lines[index];
   if (lineObj === undefined) return null;
 
-  const [copied, setCopied] = useState(false);
   const { text: line, originalIndex } = lineObj;
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(line);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [line]);
-
   const isMatch = checkLineMatch(line);
   
   let content: React.ReactNode;
@@ -191,22 +187,11 @@ const Row = React.memo(({ index, style, data }: { index: number; style: React.CS
       )}>
         {originalIndex + 1}
       </div>
-      <div className="px-6 whitespace-pre overflow-hidden text-ellipsis flex-grow pt-1">
+      <div className={cn(
+        "px-6 flex-grow pt-1",
+        wrapLines ? "whitespace-pre-wrap break-all" : "whitespace-pre overflow-hidden text-ellipsis"
+      )}>
         {content}
-      </div>
-      <div className="flex-shrink-0 flex items-center pr-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button 
-          onClick={handleCopy}
-          className={cn(
-            "p-1.5 rounded-md transition-all duration-200",
-            copied 
-              ? "bg-emerald-500/20 text-emerald-500" 
-              : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          )}
-          title={copied ? "Copied!" : "Copy line"}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-        </button>
       </div>
     </div>
   );
@@ -229,6 +214,8 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFilterView, setIsFilterView] = useState(false);
+  const [isFullWidth, setIsFullWidth] = useState(false);
+  const [wrapLines, setWrapLines] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('darkMode');
@@ -248,6 +235,7 @@ export default function App() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [suggestionPrefix, setSuggestionPrefix] = useState<string>('');
+  const [goToLineInput, setGoToLineInput] = useState<string>('');
   const [cursorPos, setCursorPos] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -534,8 +522,9 @@ export default function App() {
     keywords,
     checkLineMatch,
     highlightRegex: highlightData.regex,
-    sortedKeywords: highlightData.sorted
-  }), [highlightedContent, keywords, checkLineMatch, highlightData]);
+    sortedKeywords: highlightData.sorted,
+    wrapLines
+  }), [highlightedContent, keywords, checkLineMatch, highlightData, wrapLines]);
 
   const downloadFiltered = () => {
     if (lines.length === 0) return;
@@ -595,6 +584,22 @@ export default function App() {
     }
   };
 
+  const handleGoToLine = useCallback(() => {
+    const lineNum = parseInt(goToLineInput, 10);
+    if (isNaN(lineNum) || lineNum < 1 || !listRef.current) return;
+    
+    const targetOriginalIndex = lineNum - 1;
+    
+    if (isFilterView) {
+      const highlightedIndex = highlightedContent.findIndex(l => l.originalIndex >= targetOriginalIndex);
+      if (highlightedIndex !== -1) {
+        listRef.current.scrollToItem(highlightedIndex, 'start');
+      }
+    } else {
+      listRef.current.scrollToItem(Math.min(targetOriginalIndex, lines.length - 1), 'start');
+    }
+  }, [goToLineInput, isFilterView, highlightedContent, lines.length]);
+
   return (
     <div className={cn(
       "min-h-screen font-sans selection:bg-blue-100 transition-colors duration-300",
@@ -605,7 +610,10 @@ export default function App() {
         "border-b sticky top-0 z-10 transition-colors duration-300",
         isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
       )}>
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className={cn(
+          "mx-auto px-4 h-16 flex items-center justify-between transition-all duration-300",
+          isFullWidth ? "max-w-full" : "max-w-7xl"
+        )}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
               <Filter size={18} />
@@ -670,9 +678,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className={cn(
+        "mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 transition-all duration-300",
+        isFullWidth ? "max-w-full" : "max-w-7xl"
+      )}>
         {/* Left Column: Controls */}
-        <div className="lg:col-span-4 space-y-6">
+        {!isFullWidth && (
+          <div className="lg:col-span-4 space-y-6">
           {/* Upload Section */}
           <section className={cn(
             "rounded-2xl border p-5 shadow-sm transition-colors duration-300",
@@ -1144,9 +1156,13 @@ export default function App() {
             )}
           </AnimatePresence>
         </div>
+        )}
 
         {/* Right Column: Content Viewer */}
-        <div className="lg:col-span-8">
+        <div className={cn(
+          "transition-all duration-300",
+          isFullWidth ? "lg:col-span-12" : "lg:col-span-8"
+        )}>
           <section className={cn(
             "rounded-2xl border shadow-sm h-full flex flex-col overflow-hidden min-h-[600px] transition-colors duration-300",
             isDarkMode ? "bg-[#16191E] border-gray-800" : "bg-white border-gray-200"
@@ -1173,8 +1189,60 @@ export default function App() {
                 )}
               </div>
               {fileContent && (
-                <div className="text-xs text-gray-400 font-mono">
-                  {fileContent.length.toLocaleString()} characters
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 border-r pr-4 border-gray-200 dark:border-gray-800">
+                    <div className={cn(
+                      "flex items-center rounded-lg px-2 py-1 gap-1 transition-colors",
+                      isDarkMode ? "bg-gray-800/50" : "bg-gray-100"
+                    )}>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Go to:</span>
+                      <input
+                        type="number"
+                        value={goToLineInput}
+                        onChange={(e) => setGoToLineInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleGoToLine()}
+                        placeholder="Line #"
+                        className="w-14 bg-transparent border-none text-[10px] font-mono focus:ring-0 p-0 text-blue-500 placeholder:text-gray-500"
+                      />
+                      <button
+                        onClick={handleGoToLine}
+                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                        title="Go to line"
+                      >
+                        <ArrowRight size={12} />
+                      </button>
+                    </div>
+                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-800 mx-1" />
+                    <button
+                      onClick={() => setWrapLines(!wrapLines)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
+                        wrapLines 
+                          ? "bg-blue-500/10 text-blue-500" 
+                          : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      )}
+                      title="Toggle Wrap Lines"
+                    >
+                      <WrapText size={14} />
+                      {wrapLines ? "Wrapped" : "Compact"}
+                    </button>
+                    <button
+                      onClick={() => setIsFullWidth(!isFullWidth)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
+                        isFullWidth 
+                          ? "bg-blue-500/10 text-blue-500" 
+                          : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      )}
+                      title="Toggle Full Width"
+                    >
+                      {isFullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                      {isFullWidth ? "Shrink" : "Expand"}
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-400 font-mono">
+                    {fileContent.length.toLocaleString()} characters
+                  </div>
                 </div>
               )}
             </div>
@@ -1232,7 +1300,7 @@ export default function App() {
                           ref={listRef}
                           height={height}
                           itemCount={highlightedContent.length}
-                          itemSize={24}
+                          itemSize={wrapLines ? 64 : 24}
                           width={width}
                           itemData={itemData}
                           overscanCount={10}
@@ -1281,7 +1349,10 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-4 py-8 text-center text-gray-400 text-xs">
+      <footer className={cn(
+        "mx-auto px-4 py-8 text-center text-gray-400 text-xs transition-all duration-300",
+        isFullWidth ? "max-w-full" : "max-w-7xl"
+      )}>
         <p>&copy; 2026 Log File Parser &bull; Built with precision</p>
       </footer>
     </div>
