@@ -32,7 +32,9 @@ import {
   Calendar,
   ShieldAlert,
   Activity,
-  CheckSquare
+  CheckSquare,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -119,7 +121,15 @@ const Row = React.memo(({ index, style, data }: { index: number; style: React.CS
   const lineObj = lines[index];
   if (lineObj === undefined) return null;
 
+  const [copied, setCopied] = useState(false);
   const { text: line, originalIndex } = lineObj;
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(line);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [line]);
+
   const isMatch = checkLineMatch(line);
   
   let content: React.ReactNode;
@@ -183,6 +193,20 @@ const Row = React.memo(({ index, style, data }: { index: number; style: React.CS
       </div>
       <div className="px-6 whitespace-pre overflow-hidden text-ellipsis flex-grow pt-1">
         {content}
+      </div>
+      <div className="flex-shrink-0 flex items-center pr-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={handleCopy}
+          className={cn(
+            "p-1.5 rounded-md transition-all duration-200",
+            copied 
+              ? "bg-emerald-500/20 text-emerald-500" 
+              : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          )}
+          title={copied ? "Copied!" : "Copy line"}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+        </button>
       </div>
     </div>
   );
