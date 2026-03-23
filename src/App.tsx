@@ -1353,7 +1353,7 @@ export default function App() {
         "mx-auto px-4 py-8 text-center text-gray-400 text-xs transition-all duration-300",
         isFullWidth ? "max-w-full" : "max-w-7xl"
       )}>
-        <p>&copy; 2026 Log File Parser &bull; Built with precision</p>
+        <p>&copy; 2026 Log File Parser &bull; v1.1.0 &bull; Built with precision</p>
       </footer>
     </div>
   );
